@@ -1,98 +1,89 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
-	"time"
-
-	"github.com/aquasecurity/table"
 )
 
-// Created a data-type holding bluerprint for To-do objects
-type Todo struct {
-	Title     string
-	Status    bool
-	StartTime time.Time
-	EndTime   *time.Time
-}
+func main() {
+	var todos Todos
 
-// created a data-type with type being []Todo which is a slice
-// Todos is a datatype holding Todo structs
-type Todos []Todo
-
-func (todos *Todos) add(title string) {
-	todo := Todo{
-		Title:     title,
-		Status:    false,
-		StartTime: time.Now(),
-		EndTime:   nil,
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: todo <command> [arguments]")
+		return
 	}
 
-	*todos = append(*todos, todo)
-}
+	command := os.Args[1]
 
-func (todos *Todos) validateIndex(index int) error {
-	if index < 0 || index >= len(*todos) {
-		err := errors.New("Invalid index bozo")
-		fmt.Println(err)
-	}
-	return nil
-}
+	switch command {
 
-func (todos *Todos) delete(index int) error {
-	t := *todos
-	if err := t.validateIndex(index); err != nil {
-		return err
-	}
-	*todos = append(t[:index], t[index+1:]...)
-	return nil
-}
-
-func (todos *Todos) toggle(index int) error {
-	if err := todos.validateIndex(index); err != nil {
-		return err
-	}
-	t := *todos
-	todo := &t[index]
-
-	if !todo.Status {
-		completedTime := time.Now()
-		todo.EndTime = &completedTime
-	} else {
-		todo.EndTime = nil
-	}
-	todo.Status = !todo.Status
-	return nil
-
-}
-
-func (todos *Todos) edit(index int, title string) error {
-	if err := todos.validateIndex(index); err != nil {
-		return err
-	}
-	(*todos)[index].Title = title
-	return nil
-}
-
-func (todos *Todos) list() {
-	table := table.New(os.Stdout)
-	table.SetRowLines(true)
-	table.SetHeaders("#", "Task", "Status", "Started at", "Finished at")
-
-	for index, t := range *todos {
-		completed := "X"
-		completedAt := ""
-
-		if t.Status {
-			completed = "DONE"
-			if t.EndTime != nil {
-				completedAt = t.EndTime.Format(time.RFC1123)
-			}
+	case "add":
+		if len(os.Args) < 3 {
+			fmt.Println("Please provide a task title")
+			return
 		}
-		table.AddRow(strconv.Itoa(index), t.Title, completed, t.StartTime.Format(time.RFC1123), completedAt)
 
+		title := os.Args[2]
+		todos.add(title)
+
+	case "list":
+		todos.list()
+
+	case "delete":
+		if len(os.Args) < 3 {
+			fmt.Println("Please provide a task index")
+			return
+		}
+
+		index, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			fmt.Println("Index must be a number")
+			return
+		}
+
+		if err := todos.delete(index); err != nil {
+			fmt.Println(err)
+			return
+		}
+
+	case "edit":
+		if len(os.Args) < 4 {
+			fmt.Println("Usage: todo edit <index> <new title>")
+			return
+		}
+
+		index, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			fmt.Println("Index must be a number")
+			return
+		}
+
+		title := os.Args[3]
+
+		if err := todos.edit(index, title); err != nil {
+			fmt.Println(err)
+			return
+		}
+
+	case "toggle":
+		if len(os.Args) < 3 {
+			fmt.Println("Please provide a task index")
+			return
+		}
+
+		index, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			fmt.Println("Index must be a number")
+			return
+		}
+
+		if err := todos.toggle(index); err != nil {
+			fmt.Println(err)
+			return
+		}
+
+	default:
+		fmt.Println("Unknown command:", command)
 	}
-	table.Render()
 }
